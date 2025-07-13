@@ -10,17 +10,21 @@ The DNS and Load Balancer for distributed agent networks - routing tasks to spec
   <a href="#"><img src="https://img.shields.io/badge/status-alpha_experiment-orange.svg" alt="Status"></a>
 </p>
 
-> 🌐 **Part of [Evolving Agents Labs](https://evolvingagentslabs.github.io)** | 🔬 [View All Experiments](https://evolvingagentslabs.github.io#experiments) | 📖 [Project Details](https://evolvingagentslabs.github.io/experiments/eax-router.html)
+> 🌐 **Part of the [Evolving Agents Labs](https://evolvingagentslabs.github.io) Research Initiative**
+>
+> This project is a foundational component for building adaptive AI systems, inspired by our research in the [llmunix-spec](https://github.com/EvolvingAgentsLabs/llmunix-spec) project.
 
 ---
 
 ## ⚠️ Experimental Research Project
 
-**Important**: This is an experimental research prototype exploring intelligent LLM routing concepts. It should be treated as research material rather than a production-ready system. This project will remain permanently in alpha status as ongoing research.
+**Important**: This is an early-stage research prototype exploring intelligent LLM routing. It should be treated as research material, not a production-ready system. This project will remain permanently in alpha status as we explore the future of adaptive agent architecture.
 
 ---
 
-## The Problem (Our Research Hypothesis)
+## The Research Hypothesis: Context-Aware Model Selection
+
+Modern AI systems and agents perform many different cognitive tasks within a single workflow: summarizing text, writing code, analyzing data, and reasoning through a plan. However, most systems are hardcoded to use a single, general-purpose LLM for all these tasks. This is inefficient and expensive.
 
 In a world of specialized AI agents, we need intelligent orchestration:
 - **Agent Discovery**: How do agents find each other in a distributed network?
@@ -28,13 +32,22 @@ In a world of specialized AI agents, we need intelligent orchestration:
 - **Load Balancing**: How do we distribute work efficiently across agent instances?
 - **Protocol Standards**: How do agents communicate their capabilities and availability?
 
+Our research explores a fundamental question: **Can an agentic system dynamically select the optimal LLM for each discrete cognitive task, based on the task's unique requirements and constraints?**
+
+This leads to several problems we are investigating:
+- **High Costs:** Using frontier models for simple tasks is wasteful.
+- **Suboptimal Performance:** Using cheap models for complex reasoning leads to failure.
+- **Lack of Adaptability:** A system cannot adapt its "cognitive engine" (the LLM) in response to changing constraints, like a user's urgency or a strict budget.
+
+## The Experiment: Intelligent Cognitive Router
+
+EAX Router is our experimental implementation of a **Cognitive Routing Layer**. It introduces a decision engine between an agent's intent and the LLM providers. The agent defines the *task and its constraints*, and the router intelligently selects the *best model* based on a given optimization priority: **cost, latency, or quality.**
+
 EAX Router acts as the "Chief Logistics Officer" for networks of LLMunix instances, providing DNS-like discovery and intelligent task distribution.
 
-## The Experiment: Agent Network Orchestration
+### How It Works: A Conceptual Example
 
-EAX Router is a specialized LLMunix instance that orchestrates a network of other agent instances. It receives task requests and routes them to the most appropriate specialized worker agents based on their capabilities, availability, and performance metrics.
-
-### How It Works: Agent-to-Agent Communication
+Imagine an agent defined by the `llmunix-spec`. At one step, it needs to summarize a document. Instead of calling an LLM directly, it calls the router.
 
 ```yaml
 # EAX Router's GEMINI.md firmware configuration
@@ -52,6 +65,27 @@ virtual_tools:
     description: "Send task to chosen worker agent via message bus"
 ```
 
+```python
+# 1. Initialize the experimental router with a strategy
+router = Router(strategy="CostOptimized")
+
+# 2. An agent defines a cognitive task based on its current state
+#    (e.g., from its constraints.md file)
+task = Task(
+    prompt="Summarize this 500-word article into three bullet points.",
+    task_type="summarization",
+    priority="cost" # The agent needs to be efficient
+)
+
+# 3. The router makes an intelligent decision
+model_choice = router.route(task)
+print(f"Routing Decision: {model_choice.reason}")
+# >>> Routing Decision: Selected 'claude-3-haiku' for its high quality-to-cost ratio on summarization tasks.
+
+# 4. The agent executes the task using the optimal model
+# response = model_choice.execute(task.prompt)
+```
+
 ### Execution Flow
 
 1. **Task Reception**: Router receives a goal from a user or another agent
@@ -60,7 +94,36 @@ virtual_tools:
 4. **Intelligent Routing**: Selects the best agent based on specialization and availability
 5. **Task Forwarding**: Uses `forward_task` to delegate work via the message bus
 
-## Key Research Features
+## Core Research Areas
+
+### 1. The Open Model Fingerprint Standard (`fingerprint.json`)
+A core part of our research is creating a standardized, open schema for describing LLM capabilities. This allows for objective, data-driven routing decisions.
+
+```json
+{
+  "model_id": "claude-3-haiku-20240307",
+  "provider": "anthropic",
+  "cost_per_million_tokens": { "input": 0.25, "output": 1.25 },
+  "avg_latency_ms_per_1k_tokens": 350,
+  "context_window": 200000,
+  "capabilities": {
+    "summarization": { "quality_score": 8.5, "confidence": 0.92 },
+    "code_generation": { "quality_score": 6.0, "confidence": 0.78 },
+    "reasoning": { "quality_score": 7.2, "confidence": 0.85 }
+  },
+  "strengths": ["low_latency", "high_throughput"],
+  "last_updated": "2024-06-25",
+  "benchmarked_by": "EvolvingAgentsLabs"
+}
+```
+**Help our research!** We need community contributions to benchmark models and expand our fingerprint database.
+
+### 2. Pluggable Routing Strategies
+We are experimenting with different algorithms for decision-making. The `Strategy` pattern allows anyone to invent new routing logic.
+- **`CostOptimized`**: Finds the cheapest model that meets a quality threshold.
+- **`LatencyOptimized`**: Finds the fastest model available.
+- **`QualityOptimized`**: Finds the model with the highest quality score for the task, ignoring cost.
+- **`Balanced`**: A default strategy that weighs all factors.
 
 ### 🔌 Agent Discovery Mechanisms
 - **Registry-Based**: Agents register their capabilities in a shared directory
@@ -100,6 +163,12 @@ EAX Router enables communication between diverse agent types:
 - **Tool Agents**: Agents specialized in using specific external tools
 - **Observer Agents**: Monitoring and logging instances (llmunix-canvas)
 - **Gateway Agents**: Bridge instances connecting to external services
+
+### 3. Provider-Agnostic Architecture
+An agent should not be tied to a single provider. We are building a flexible architecture to support:
+- **Major Providers:** OpenAI, Anthropic, Google, etc.
+- **Open-Source Models:** Via wrappers for Ollama, Together AI, and other services.
+- **Extensible Interface:** A simple base class for adding new providers.
 
 ### ⚡ Intelligent Routing Algorithms
 
@@ -217,6 +286,39 @@ EOF
 gemini-cli --agentic-markdown GEMINI.md
 ```
 
+## Research Roadmap
+
+### Phase 1: Foundation (Current)
+- [x] Basic LLMunix integration concept
+- [x] Message bus architecture design
+- [x] Basic routing framework & provider abstraction
+- [x] Initial `fingerprint.json` standard definition
+- [ ] Agent registry implementation
+- [ ] Task classification system
+- [ ] Basic routing algorithms
+- [ ] Develop a comprehensive, open-source benchmark suite for fingerprinting
+- [ ] Refine the initial set of routing strategies
+
+### Phase 2: Network Intelligence
+- [ ] Dynamic agent discovery protocols
+- [ ] Load balancing algorithms
+- [ ] Failure detection and recovery
+- [ ] Performance-based routing
+- [ ] SAL-CP protocol integration
+- [ ] Research ML-based routing strategies that learn from outcomes
+- [ ] Develop a mechanism for the router to detect "context drift"
+- [ ] Integrate with the [EAX Protocol (SAL-CP)](https://github.com/EvolvingAgentsLabs/sal-cp) to use an agent's cognitive state as a routing signal
+
+### Phase 3: Ecosystem Scale
+- [ ] Multi-router federation
+- [ ] Hierarchical routing networks
+- [ ] Cross-network agent discovery
+- [ ] Marketplace integration for economic routing
+- [ ] Global agent capability index
+- [ ] Launch a community-run, versioned database for model fingerprints
+- [ ] Formalize integration patterns with major AI frameworks
+- [ ] Build tools for visualizing routing decisions and cost savings
+
 ## Research Contributions Welcome
 
 ### How to Contribute Model Fingerprints
@@ -240,46 +342,6 @@ python -m eax_router.research.fingerprint --model "your-model-id" --output finge
 - **Translation**: Multi-language capabilities
 - **Instruction Following**: Complex multi-step tasks
 
-## Research Roadmap
-
-### Phase 1: Foundation (Current)
-- [x] Basic LLMunix integration concept
-- [x] Message bus architecture design
-- [ ] Agent registry implementation
-- [ ] Task classification system
-- [ ] Basic routing algorithms
-
-### Phase 2: Network Intelligence
-- [ ] Dynamic agent discovery protocols
-- [ ] Load balancing algorithms
-- [ ] Failure detection and recovery
-- [ ] Performance-based routing
-- [ ] SAL-CP protocol integration
-
-### Phase 3: Ecosystem Scale
-- [ ] Multi-router federation
-- [ ] Hierarchical routing networks
-- [ ] Cross-network agent discovery
-- [ ] Marketplace integration for economic routing
-- [ ] Global agent capability index
-
-## Performance Research
-
-Early agent network routing results (simulated):
-
-| Task Type | Specialized Agent | Generalist Agent | Routing Time | Success Rate |
-|-----------|------------------|------------------|--------------|--------------|
-| Haiku Writing | Haiku Specialist | GPT-4 Agent | 45ms | 98% |
-| Code Review | Code Analyst | General Assistant | 62ms | 95% |
-| Data Analysis | Stats Expert | Claude Agent | 38ms | 97% |
-| Translation | Polyglot Agent | General Model | 51ms | 96% |
-
-### Network Metrics
-- **Agent Discovery Time**: ~20-50ms average
-- **Message Routing Overhead**: <100ms per hop
-- **Network Resilience**: 94% uptime with 3+ agents
-- **Load Distribution**: 40% improvement vs single agent
-
 ## Research Ethics & Considerations
 
 ### Responsible AI Research
@@ -294,42 +356,20 @@ Early agent network routing results (simulated):
 - Quality scores are subjective and task-dependent
 - Provider availability and pricing change frequently
 
-## Community & Research
+## How to Contribute
 
-### Join Our Research
-- **📧 Discussions**: [GitHub Discussions](https://github.com/EvolvingAgentsLabs/eax-router/discussions)
-- **🐛 Issues**: Report bugs or suggest improvements
-- **📊 Benchmarks**: Contribute model performance data
-- **🔬 Experiments**: Share routing strategy research
-
-### Citation
-If you use EAX Router in your research, please cite:
-
-```bibtex
-@software{eax_router_2024,
-  title={EAX Router: Experimental Intelligent LLM Routing Layer},
-  author={Molinas, Matias and Faro, Ismael},
-  year={2024},
-  organization={Evolving Agents Labs},
-  url={https://github.com/EvolvingAgentsLabs/eax-router}
-}
-```
-
-## Contributing
-
-We welcome contributions from researchers and developers:
+This is a community-driven research project. The most valuable contribution you can make is helping us build a rich, objective database of model fingerprints.
 
 1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/routing-strategy`)
-3. **Commit** your changes (`git commit -m 'Add intelligent routing strategy'`)
-4. **Push** to the branch (`git push origin feature/routing-strategy`)
-5. **Open** a Pull Request
+2. **Clone the repo** and set up the environment
+3. **Run the benchmark suite** against a model you have access to: `python -m eax_router.research.benchmark --model "your-model-id"`
+4. **Submit a Pull Request** with the generated `fingerprint.json` file
 
-Please read our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We also welcome contributions to new routing strategies, provider integrations, and improvements to the core framework. Please read our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
 ## License
 
-EAX Router is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for details.
+EAX Router is licensed under the Apache 2.0 License.
 
 ---
 
@@ -340,5 +380,4 @@ EAX Router is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for 
 **Organization**: [EvolvingAgentsLabs](https://github.com/EvolvingAgentsLabs) • **Lab Site**: [evolvingagentslabs.github.io](https://evolvingagentslabs.github.io)
 
 ---
-
-*Part of the EAX Protocol Suite from [Evolving Agents Labs](https://evolvingagentslabs.github.io) - Building the future of intelligent agents through experimental research*
+*EAX Router is a core component of the experimental agent architecture being developed at [Evolving Agents Labs](https://evolvingagentslabs.github.io). Our goal is to build the foundational tools for truly intelligent and adaptive AI systems.*
